@@ -1,0 +1,67 @@
+from urllib.parse import urlparse
+import requests
+import json
+import sys
+
+my_token = 'faa2c9bbe7c8efc71236aa97c9407266d599b990'
+
+def input_url():
+    url=input()
+    if url == '0':
+        sys.exit(0)
+    return url
+#Конец функции input_url()
+
+def short_url(long_url):
+	def_url = 'https://api-ssl.bitly.com/v4/shorten'
+	headers = {'Authorization' : my_token}
+	params = {'long_url': long_url}
+	response = requests.post(def_url, headers=headers, json=params)
+	while response.status_code != 200:
+		print('Некорректный ввод!!! Попробуйте еще раз (0 - выход):')
+		print('Пример - https://dvmn.org')
+		long_url = input_url()
+		params = {'long_url': long_url}
+		response = requests.post(def_url, headers=headers, json=params)
+	js = response.json()
+	bitlink = js.get('id')
+	return(bitlink)
+#Конец функции short_url	
+
+def count_clicks(sh_url):
+	def_url = 'https://api-ssl.bitly.com/v4/bitlinks/' + sh_url + '/clicks/summary'
+	headers = {'Authorization' : my_token}
+	payload = {"unit": "day", "units" : 5, "size" : 10}
+	try:
+		response = requests.get(def_url, params=payload, headers=headers)
+		response.raise_for_status()
+		answer_text = response.text
+		answer_dict = json.loads(answer_text)
+		count = answer_dict.get("total_clicks")
+	except requests.exceptions.HTTPError as err:
+		print('Извините, ошибка сервера')
+		count = 'подсчитать не удалось.'
+	print('Количество кликов - ', count)
+#Конец функции count_clicks	
+
+def is_bitlink(bitlink):
+    def_url = 'https://api-ssl.bitly.com/v4/bitlinks/' + bitlink
+    headers = {'Authorization' : my_token}
+    try:
+        response = requests.get(def_url, headers=headers)
+        response.raise_for_status()
+        return True
+    except requests.exceptions.HTTPError as err:
+        return False
+#Конец функции is_bitlink
+
+print('Введите HTTP (0 - выход):')
+print('Пример - https://dvmn.org')
+url = input_url()
+
+if is_bitlink(url):
+	count_clicks(url)
+	sys.exit(0)
+
+bitlink = short_url(url)
+print('Короткая ссылка -', bitlink)
